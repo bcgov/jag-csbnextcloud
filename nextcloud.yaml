@@ -1,0 +1,507 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: nextcloud
+  labels:
+    appcluster: nextcloud
+  annotations:
+    description: "Nextcloud - A safe home for all your data"
+    tags: "fileshare,nextcloud"
+    iconClass: fa-cloud-upload
+    template.openshift.io/provider-display-name: "ChrisHoban"
+    template.openshift.io/documentation-url: "https://github.com/ChrisHoban/ssg-openshift-meta-templates/blob/master/openshift/oc4-meta-templates/services/nextcloud/README.md"
+    template.openshift.io/support-url: "https://github.com/ChrisHoban/ssg-openshift-meta-templates/issues"
+parameters:
+- name: NEXTCLOUD_HOST
+  description: Application URL of Nextcloud (Route/host)
+  required: true
+- name: NEXTCLOUD_IMAGE
+  description: Image to deploy
+  value: nextcloud
+- name: NEXTCLOUD_IMAGE_TAG
+  description: Tag of the internal Nextcloud Image to deploy
+  value: latest
+- name: PVC_SIZE
+  description: PVC size for Apps, Config and Data
+  value: 10Gi
+- name: tools_namespace
+  description: OpenShift Namespace of ImageStreams
+  required: true
+- description: Maximum amount of memory the db container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: 1Gi
+- description: Requested amount of memory the db container can use.
+  displayName: Memory Limit
+  name: MEMORY_REQUEST
+  required: true
+  value: 512Mi
+- description: Maximum amount of cpu the db container can use.
+  displayName: Memory Limit
+  name: CPU_LIMIT
+  required: true
+  value: '1'
+- description: Requested amount of cpu the db container can use.
+  displayName: Memory Limit
+  name: CPU_REQUEST
+  required: true
+  value: 500m
+- description: Maximum amount of memory the nextcloud container can use.
+  displayName: Memory Limit
+  name: NC_MEMORY_LIMIT
+  required: true
+  value: 4Gi
+- description: Requested amount of memory the nextcloud container can use.
+  displayName: Memory Limit
+  name: NC_MEMORY_REQUEST
+  required: true
+  value: 2Gi
+- description: Maximum amount of cpu the nextcloud container can use.
+  displayName: Memory Limit
+  name: NC_CPU_LIMIT
+  required: true
+  value: '4'
+- description: Requested amount of cpu the nextcloud container can use.
+  displayName: Memory Limit
+  name: NC_CPU_REQUEST
+  required: true
+  value: '2'
+- description: The name of the OpenShift Service exposed for the database.
+  displayName: Database Service Name
+  name: DATABASE_SERVICE_NAME
+  required: true
+  value: mariadb
+- description: Username for MariaDB user that will be used for accessing the database.
+  displayName: MariaDB Connection Username
+  from: user[A-Z0-9]{3}
+  generate: expression
+  name: MYSQL_USER
+  required: true
+- description: Password for the MariaDB connection user.
+  displayName: MariaDB Connection Password
+  from: '[a-zA-Z0-9]{16}'
+  generate: expression
+  name: MYSQL_PASSWORD
+  required: true
+- description: Password for the MariaDB root user.
+  displayName: MariaDB root Password
+  from: '[a-zA-Z0-9]{16}'
+  generate: expression
+  name: MYSQL_ROOT_PASSWORD
+  required: true
+- description: Name of the MariaDB database accessed.
+  displayName: MariaDB Database Name
+  name: MYSQL_DATABASE
+  required: true
+  value: nextcloud
+- description: Version of MariaDB image to be used (10.1, 10.2 or latest).
+  displayName: Version of MariaDB Image
+  name: MARIADB_VERSION
+  required: true
+  value: latest
+- description: Volume space available for data, e.g. 512Mi, 2Gi.
+  displayName: Volume Capacity
+  name: VOLUME_CAPACITY
+  required: true
+  value: 10Gi
+objects:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    annotations:
+      template.openshift.io/expose-database_name: '{.data[''database-name'']}'
+      template.openshift.io/expose-password: '{.data[''database-password'']}'
+      template.openshift.io/expose-root_password: '{.data[''database-root-password'']}'
+      template.openshift.io/expose-username: '{.data[''database-user'']}'
+    name: ${DATABASE_SERVICE_NAME}
+    labels:
+      appcluster: nextcloud
+  stringData:
+    database-name: ${MYSQL_DATABASE}
+    database-password: ${MYSQL_PASSWORD}
+    database-root-password: ${MYSQL_ROOT_PASSWORD}
+    database-user: ${MYSQL_USER}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mariadb")].port}
+    name: ${DATABASE_SERVICE_NAME}
+    labels:
+      appcluster: nextcloud
+  spec:
+    ports:
+    - name: mariadb
+      port: 3306
+    selector:
+      name: ${DATABASE_SERVICE_NAME}
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${DATABASE_SERVICE_NAME}
+    annotations:
+      volume.beta.kubernetes.io/storage-class: netapp-block-standard
+    labels:
+      appcluster: nextcloud
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: netapp-block-standard
+    resources:
+      requests:
+        storage: ${VOLUME_CAPACITY}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+    name: ${DATABASE_SERVICE_NAME}
+    labels:
+      appcluster: nextcloud
+  spec:
+    replicas: 1
+    selector:
+      name: ${DATABASE_SERVICE_NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          name: ${DATABASE_SERVICE_NAME}
+      spec:
+        containers:
+        - env:
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                key: database-user
+                name: ${DATABASE_SERVICE_NAME}
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: database-password
+                name: ${DATABASE_SERVICE_NAME}
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: database-root-password
+                name: ${DATABASE_SERVICE_NAME}
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                key: database-name
+                name: ${DATABASE_SERVICE_NAME}
+          image: mariadb:${MARIADB_VERSION}
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 30
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 1
+          name: mariadb
+          ports:
+          - containerPort: 3306
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - MYSQL_PWD="$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE
+                -e 'SELECT 1'
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: ${MEMORY_LIMIT}
+              cpu:  ${CPU_LIMIT}
+            requests:
+              memory: ${MEMORY_REQUEST}
+              cpu:  ${CPU_REQUEST}
+          volumeMounts:
+          - mountPath: /var/lib/mysql
+            name: ${DATABASE_SERVICE_NAME}-data
+        volumes:
+        - name: ${DATABASE_SERVICE_NAME}-data
+          persistentVolumeClaim:
+            claimName: ${DATABASE_SERVICE_NAME}
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - mariadb
+        from:
+          kind: ImageStreamTag
+          name: mariadb:${MARIADB_VERSION}
+          namespace: ${tools_namespace}
+      type: ImageChange
+    - type: ConfigChange
+- kind: PersistentVolumeClaim
+  apiVersion: v1
+  metadata:
+    name: nextcloud-data
+    labels:
+      appcluster: nextcloud
+  spec:
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: ${PVC_SIZE}
+- kind: PersistentVolumeClaim
+  apiVersion: v1
+  metadata:
+    name: nextcloud-files
+    labels:
+      appcluster: nextcloud
+  spec:
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: ${PVC_SIZE}
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    labels:
+      app: nextcloud
+      appcluster: nextcloud
+    name: nextcloud
+  spec:
+    replicas: 1
+    selector:
+      app: nextcloud
+      deploymentconfig: nextcloud
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources:
+        limits:
+          memory: ${NC_MEMORY_LIMIT}
+          cpu:  ${NC_CPU_LIMIT}
+        requests:
+          memory: ${NC_MEMORY_REQUEST}
+          cpu:  ${NC_CPU_REQUEST}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: nextcloud
+          deploymentconfig: nextcloud
+      spec:
+        containers:
+        - env:
+          - name: NC_dbhost
+            value: mariadb
+          - name: NC_dbuser
+            valueFrom:
+              secretKeyRef:
+                key: database-user
+                name: mariadb
+          - name: NC_dbpassword
+            valueFrom:
+              secretKeyRef:
+                key: database-password
+                name: mariadb
+          - name: NC_dbname
+            value: nextcloud
+          image: my-nextcloud
+          namespace: ${tools_namespace}
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 9000
+            timeoutSeconds: 5
+          name: nextcloud
+          ports:
+          - containerPort: 9000
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 9000
+            timeoutSeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /var/www/html
+            name: nextcloud-files
+        - image: my-nginx
+          namespace: ${tools_namespace}
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 5
+          name: nginx
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /var/www/html
+            name: nextcloud-files
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: nextcloud-files
+          persistentVolumeClaim:
+            claimName: nextcloud-files
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - nextcloud
+        from:
+          kind: ImageStreamTag
+          name: my-nextcloud:latest
+          namespace: ${tools_namespace}
+      type: ImageChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - nginx
+        from:
+          kind: ImageStreamTag
+          name: my-nginx:latest
+          namespace: ${tools_namespace}
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: nextcloud
+    name: nextcloud
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: nextcloud
+      deploymentconfig: nextcloud
+    sessionAffinity: None
+    type: ClusterIP
+- kind: Route
+  apiVersion: v1
+  metadata:
+    name: nextcloud
+    labels:
+      appcluster: nextcloud
+  spec:
+    host: ${NEXTCLOUD_HOST}
+    port:
+      targetPort: 8080-tcp
+    to:
+      kind: Service
+      name: nextcloud
+      weight: 100
+    wildcardPolicy: None
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: nextcloud-environment
+    labels:
+      appcluster: nextcloud
+  data:
+    CORDYN_Adapter_Endpoints_CLIE_MRGE: 'http://cordyn-dynamics-adapter-internal:8080/api/dynamics/clientmerge'
+    CORDYN_Cornet_Endpoints_CLIE_MRGE: 'https://wsgw.dev.jag.gov.bc.ca/CorDynQueueManager/clientMergeData'
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    name: nextcloud-cron
+    labels:
+      appcluster: nextcloud
+  spec:
+    concurrencyPolicy: Replace
+    jobTemplate:
+      spec:
+        activeDeadlineSeconds: 3600
+        template:
+          spec:
+            containers:
+            - args:
+              - php
+              - -f
+              - /var/www/html/cron.php
+              env:
+              - name: NEXTCLOUD_UPDATE
+                value: "1"
+              - name: NC_dbhost
+                value: mariadb
+              - name: NC_dbuser
+                valueFrom:
+                  secretKeyRef:
+                    key: database-user
+                    name: mariadb
+              - name: NC_dbpassword
+                valueFrom:
+                  secretKeyRef:
+                    key: database-password
+                    name: mariadb
+              - name: NC_dbname
+                value: nextcloud
+              image: my-nextcloud:latest
+              namespace: ${tools_namespace}
+              imagePullPolicy: Always
+              name: nextcloud-cron
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+              volumeMounts:
+              - mountPath: /var/www/html
+                name: nextcloud-source
+              - mountPath: /var/nc/data
+                name: nextcloud-data
+                subPath: data
+              - mountPath: /var/nc/config
+                name: nextcloud-data
+                subPath: config
+              - mountPath: /var/nc/custom_apps
+                name: nextcloud-data
+                subPath: apps
+            dnsPolicy: ClusterFirst
+            restartPolicy: Never
+            securityContext: {}
+            terminationGracePeriodSeconds: 30
+            volumes:
+            - name: nextcloud-source
+              emptyDir: {}
+            - name: nextcloud-data
+              persistentVolumeClaim:
+                claimName: nextcloud-data
+    schedule: '*/15 * * * *'
+    suspend: false
