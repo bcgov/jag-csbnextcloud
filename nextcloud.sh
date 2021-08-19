@@ -7,7 +7,7 @@ read -p 'Docker User: ' dockerUser
 read -sp 'Docker Credential: ' dockerCred
 
 # Config Values
-appname="ocj-sft"
+appname="csb-sft"
 nextcloudName="${appname}-nextcloud"
 nextcloudImage="nextcloud:22-fpm"
 nextcloudImagestreamName="nextcloud"
@@ -62,7 +62,7 @@ then
   oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNginxImagestream}  | oc4 create -f -
 fi
 
-# One Time Only TOOLS Setup
+# One Time Only Namespace Permissions
 if [ ${firstTimeNamespace} == "1" ]
 then
   #Grant access to tools namespace images to the deployment namespace
@@ -70,5 +70,11 @@ then
 fi
 
 oc4 project ${oc4Ns}
+
+# One Time Only Namespace DB Deploy
+if [ ${firstTimeNamespace} == "1" ]
+then
+  oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} | oc4 create -f -
+fi
 
 oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} | oc4 create -f -

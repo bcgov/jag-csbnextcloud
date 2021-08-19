@@ -59,12 +59,12 @@ parameters:
   displayName: Memory Limit
   name: NC_CPU_LIMIT
   required: true
-  value: '4'
+  value: '2'
 - description: Requested amount of cpu the nextcloud container can use.
   displayName: Memory Limit
   name: NC_CPU_REQUEST
   required: true
-  value: '2'
+  value: '1'
 - description: The name of the OpenShift Service exposed for the database.
   displayName: Database Service Name
   name: DATABASE_SERVICE_NAME
@@ -114,137 +114,6 @@ parameters:
   required: true
   value: '*'
 objects:
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    annotations:
-      template.openshift.io/expose-MYSQL_DATABASE: '{.data[''database-name'']}'
-      template.openshift.io/expose-password: '{.data[''database-password'']}'
-      template.openshift.io/expose-root_password: '{.data[''database-root-password'']}'
-      template.openshift.io/expose-username: '{.data[''database-user'']}'
-    name: ${DATABASE_SERVICE_NAME}
-    labels:
-      appcluster: ${nextcloud_name}
-  stringData:
-    database-name: ${MYSQL_DATABASE}
-    database-password: ${MYSQL_PASSWORD}
-    database-root-password: ${MYSQL_ROOT_PASSWORD}
-    database-user: ${MYSQL_USER}
-- apiVersion: v1
-  kind: Service
-  metadata:
-    annotations:
-      template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mariadb")].port}
-    name: ${DATABASE_SERVICE_NAME}
-    labels:
-      appcluster: ${nextcloud_name}
-  spec:
-    ports:
-    - name: mysql
-      port: 3306
-    selector:
-      name: ${DATABASE_SERVICE_NAME}
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    name: ${DATABASE_SERVICE_NAME}
-    annotations:
-      volume.beta.kubernetes.io/storage-class: netapp-block-standard
-    labels:
-      appcluster: ${nextcloud_name}
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    storageClassName: netapp-block-standard
-    resources:
-      requests:
-        storage: ${VOLUME_CAPACITY}
-- apiVersion: v1
-  kind: DeploymentConfig
-  metadata:
-    annotations:
-      template.alpha.openshift.io/wait-for-ready: "true"
-    name: ${DATABASE_SERVICE_NAME}
-    labels:
-      appcluster: ${nextcloud_name}
-  spec:
-    replicas: 1
-    selector:
-      name: ${DATABASE_SERVICE_NAME}
-    strategy:
-      type: Recreate
-    template:
-      metadata:
-        labels:
-          name: ${DATABASE_SERVICE_NAME}
-      spec:
-        containers:
-        - env:
-          - name: MYSQL_USER
-            valueFrom:
-              secretKeyRef:
-                key: database-user
-                name: ${DATABASE_SERVICE_NAME}
-          - name: MYSQL_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: database-password
-                name: ${DATABASE_SERVICE_NAME}
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                key: database-root-password
-                name: ${DATABASE_SERVICE_NAME}
-          - name: MYSQL_DATABASE
-            valueFrom:
-              secretKeyRef:
-                key: database-name
-                name: ${MYSQL_DATABASE}
-          image: mysql:${DB_VERSION}
-          imagePullPolicy: Always
-          livenessProbe:
-            initialDelaySeconds: 30
-            tcpSocket:
-              port: 3306
-            timeoutSeconds: 1
-          name: mysql
-          ports:
-          - containerPort: 3306
-          readinessProbe:
-            exec:
-              command:
-              - /bin/sh
-              - -i
-              - -c
-              - MYSQL_PWD="$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE
-                -e 'SELECT 1'
-            initialDelaySeconds: 5
-            timeoutSeconds: 1
-          resources:
-            limits:
-              memory: ${MEMORY_LIMIT}
-              cpu:  ${CPU_LIMIT}
-            requests:
-              memory: ${MEMORY_REQUEST}
-              cpu:  ${CPU_REQUEST}
-          volumeMounts:
-          - mountPath: /var/lib/mysql
-            name: ${DATABASE_SERVICE_NAME}-data
-        volumes:
-        - name: ${DATABASE_SERVICE_NAME}-data
-          persistentVolumeClaim:
-            claimName: ${DATABASE_SERVICE_NAME}
-    triggers:
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - mysql
-        from:
-          kind: ImageStreamTag
-          name: mysql:${DB_VERSION}
-          namespace: ${tools_namespace}
-      type: ImageChange
-    - type: ConfigChange
 - kind: PersistentVolumeClaim
   apiVersion: v1
   metadata:
