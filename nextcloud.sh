@@ -23,6 +23,7 @@ dockerPullSecret="${nextcloudImagestreamName}-docker-creds"
 customNextcloudImagestream="my-nextcloud"
 customNginxImagestream="my-nginx"
 ipWhitelist="*"
+cronUrl="http://${nextcloudName}:8080/cron.php"
 
 
 
@@ -77,4 +78,4 @@ then
   oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} | oc4 create -f -
 fi
 
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} | oc4 create -f -
+oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} | oc4 create -f -

@@ -17,12 +17,12 @@ parameters:
   displayName: Memory Limit
   name: MEMORY_LIMIT
   required: true
-  value: 1Gi
+  value: 8Gi
 - description: Requested amount of memory the db container can use.
   displayName: Memory Limit
   name: MEMORY_REQUEST
   required: true
-  value: 512Mi
+  value: 4Gi
 - description: Maximum amount of cpu the db container can use.
   displayName: Memory Limit
   name: CPU_LIMIT
@@ -158,7 +158,7 @@ objects:
             valueFrom:
               secretKeyRef:
                 key: database-name
-                name: ${MYSQL_DATABASE}
+                name: mysql
           image: mysql:${DB_VERSION}
           imagePullPolicy: Always
           livenessProbe:
