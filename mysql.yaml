@@ -83,7 +83,7 @@ objects:
       template.openshift.io/expose-username: '{.data[''database-user'']}'
     name: ${DATABASE_SERVICE_NAME}
     labels:
-      appcluster: ${nextcloud_name}
+      appcluster: nextcloud-mysql
   stringData:
     database-name: ${MYSQL_DATABASE}
     database-password: ${MYSQL_PASSWORD}
@@ -96,7 +96,7 @@ objects:
       template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mariadb")].port}
     name: ${DATABASE_SERVICE_NAME}
     labels:
-      appcluster: ${nextcloud_name}
+      appcluster: nextcloud-mysql
   spec:
     ports:
     - name: mysql
@@ -110,7 +110,7 @@ objects:
     annotations:
       volume.beta.kubernetes.io/storage-class: netapp-block-standard
     labels:
-      appcluster: ${nextcloud_name}
+      appcluster: nextcloud-mysql
   spec:
     accessModes:
     - ReadWriteOnce
@@ -125,7 +125,7 @@ objects:
       template.alpha.openshift.io/wait-for-ready: "true"
     name: ${DATABASE_SERVICE_NAME}
     labels:
-      appcluster: ${nextcloud_name}
+      appcluster: nextcloud-mysql
   spec:
     replicas: 1
     selector:

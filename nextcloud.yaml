@@ -67,22 +67,22 @@ parameters:
   value: '1'
 - description: Maximum amount of memory the nginx container can use.
   displayName: Memory Limit
-  name: Nx_MEMORY_LIMIT
+  name: NX_MEMORY_LIMIT
   required: true
   value: 2Gi
 - description: Requested amount of memory the nginx container can use.
   displayName: Memory Limit
-  name: Nx_MEMORY_REQUEST
+  name: NX_MEMORY_REQUEST
   required: true
   value: 1Gi
 - description: Maximum amount of cpu the nginx container can use.
   displayName: Memory Limit
-  name: Nx_CPU_LIMIT
+  name: NX_CPU_LIMIT
   required: true
   value: 500m
 - description: Requested amount of cpu the nginx container can use.
   displayName: Memory Limit
-  name: Nx_CPU_REQUEST
+  name: NX_CPU_REQUEST
   required: true
   value: 500m
 - description: The name of the OpenShift Service exposed for the database.
@@ -134,11 +134,11 @@ parameters:
   required: true
   value: '*'
 - name: CURL_URL
-  description: Curl URL to hit  (eg: 'http://servicename/uri' )
+  description: "Curl URL to hit  (eg: 'http://servicename/uri' )"
   required: true
   value: 'http://servicename/cron.php'
 - name: SCHEDULE
-  description: Schedule of cron  (eg: '*/15 * * * *' every 15 minutes)
+  description: "Schedule of cron  (eg: '*/15 * * * *' every 15 minutes)"
   required: true
   value: '*/5 * * * *'
 objects:
@@ -517,7 +517,7 @@ objects:
   metadata:
     name: ${nextcloud_name}-cron
     labels:
-      appcluster: ${CRON_NAME}
+      appcluster: ${nextcloud_name}
   spec:
     schedule: ${SCHEDULE}
     startingDeadlineSeconds: 200
