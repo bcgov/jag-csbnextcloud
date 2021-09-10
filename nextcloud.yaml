@@ -279,12 +279,29 @@ objects:
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             fastcgi_param PATH_INFO $fastcgi_path_info;
             fastcgi_param HTTPS on;
+            #fastcgi_param REMOTE_ADDR $http_x_forwarded_for;
+            #fastcgi_param REMOTE_ADDR $http_x_real_ip;
             #Avoid sending the security headers twice
             fastcgi_param modHeadersAvailable true;
             fastcgi_param front_controller_active true;
             fastcgi_pass php-handler;
             fastcgi_intercept_errors on;
+
+            # Raise timeout values.
+            # This is especially important when the Nextcloud setup runs into timeouts (504 gateway errors)
+            fastcgi_read_timeout 600;
+            fastcgi_send_timeout 600;
+            fastcgi_connect_timeout 600;
             fastcgi_request_buffering off;
+
+            # Pass PHP variables directly to PHP.
+            # This is usually done in the php.ini. For more flexibility, these variables are configured in the nginx config.
+            # All the PHP parameters have to be set in one fastcgi_param. When using more 'fastcgi_param PHP_VALUE' directives, the last one will override all the others.
+            fastcgi_param PHP_VALUE "open_basedir=/var/www:/tmp/:/var/nextcloud_data:/dev/urandom:/proc/meminfo
+                              upload_max_filesize = 10G
+                              post_max_size = 10G
+                              max_execution_time = 3600
+                              output_buffering = off";
           }
 
           location ~ ^/(?:updater|ocs-provider)(?:$|/) {
