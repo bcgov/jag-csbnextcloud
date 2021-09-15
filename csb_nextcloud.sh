@@ -5,11 +5,14 @@ read -p 'Openshift 4 License Plate: ' license
 read -p 'Openshift 4 License Env: ' env
 
 #configuration
-nextcloudImage="nextcloud:22-fpm"
+nextcloudImageTag="22.1.1-fpm"
+nextcloudImage="nextcloud:${nextcloudImageTag}"
 nextcloudImagestreamName="nextcloud"
-nginxImage="nginx:alpine"
+nginxImageTag="latest"
+nginxImage="nginx:${nginxImageTag}"
 nginxImagestreamName="nginx"
-databaseImage="mysql:latest"
+databaseImageTag="latest"
+databaseImage="mysql:${databaseImageTag}"
 databaseImagestreamName="mysql"
 oc4Ns="${license}-${env}"
 toolsNs="${license}-tools"
@@ -47,19 +50,19 @@ then
   oc secrets link builder ${dockerPullSecret}
 
   echo 'Nextcloud ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nextcloudImage} -p imagestreamName=${nextcloudImagestreamName} -p dockerPullSecret=${dockerPullSecret} | oc4 create -f -
+  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nextcloudImage} -p imagestreamName=${nextcloudImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${nextcloudImageTag} | oc4 create -f -
   echo 'NGINX ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nginxImage} -p imagestreamName=${nginxImagestreamName} -p dockerPullSecret=${dockerPullSecret} | oc4 create -f -
+  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nginxImage} -p imagestreamName=${nginxImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${nginxImageTag} | oc4 create -f -
   echo 'Database ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${databaseImage} -p imagestreamName=${databaseImagestreamName} -p dockerPullSecret=${dockerPullSecret} | oc4 create -f -
+  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${databaseImage} -p imagestreamName=${databaseImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${databaseImageTag} | oc4 create -f -
   echo 'Nextcloud Builder'
-  oc process -f nextcloud-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNextcloudImagestream} | oc4 create -f -
+  oc process -f nextcloud-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNextcloudImagestream} -p imageTag=${nextcloudImageTag} | oc4 create -f -
   echo 'Custom Nextcloud ImageStream'
-  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNextcloudImagestream}  | oc4 create -f -
+  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNextcloudImagestream} -p imageTag=${nextcloudImageTag} | oc4 create -f -
   echo 'Nginx Builder'
-  oc process -f nginx-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNginxImagestream} | oc4 create -f -
+  oc process -f nginx-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNginxImagestream} -p imageTag=${nginxImageTag}  | oc4 create -f -
   echo 'Custom Nginx ImageStream'
-  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNginxImagestream}  | oc4 create -f -
+  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNginxImagestream} -p imageTag=${nginxImageTag} | oc4 create -f -
 fi
 
 # One Time Only Namespace Permissions
@@ -75,10 +78,10 @@ oc4 project ${oc4Ns}
 # One Time Only Namespace DB Deploy
 if [ ${firstTimeNamespace} == "1" ]
 then
-  oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} | oc4 create -f -
+  oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p DB_VERSION=${databaseImageTag} | oc4 create -f -
 fi
 
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} | oc4 create -f -
+oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
 
 ### MySQL DB Add second user there
 
@@ -86,4 +89,4 @@ oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.de
 appname="ocj-sft"
 nextcloudName="${appname}-nextcloud"
 cronUrl="http://${nextcloudName}:8080/cron.php"
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} | oc4 create -f -
+oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -

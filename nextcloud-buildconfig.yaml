@@ -23,7 +23,11 @@ parameters:
   description: Namespace containing nextcloud imagestreams
   value:
 - name: outputImageName
+  required: true
   description: output imagestream
+- name: imageTag
+  description: output tag
+  required: true
 objects:
 - kind: BuildConfig
   apiVersion: v1
@@ -31,16 +35,16 @@ objects:
   metadata:
     creationTimestamp: null
     labels:
-      build: my-nextcloud
+      build: ${outputImageName}
       app: nextcloud
       appcluster: nextcloud
-    name: my-nextcloud
+    name: ${outputImageName}
   spec:
     nodeSelector: null
     output:
       to:
         kind: ImageStreamTag
-        name: ${outputImageName}:latest
+        name: ${outputImageName}:{imageTag}
         namespace: ${namespace}
     postCommit: {}
     resources: {}
@@ -56,7 +60,7 @@ objects:
         imageOptimizationPolicy: SkipLayers
         from:
           kind: ImageStreamTag
-          name: nextcloud:latest
+          name: nextcloud:{imageTag}
       type: Docker
     triggers:
     - type: ConfigChange

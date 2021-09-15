@@ -31,6 +31,10 @@ parameters:
     name: imagestreamName
     required: true
     value:
+  - description: The tag of the resulting Imagestream
+    displayName: Imagestream Tag
+    name: imagestreamTag
+    value:
   - description: The Pull Secret Name for Docker
     displayName: Docker Pull Secret Name
     name: dockerPullSecret

@@ -25,6 +25,10 @@ parameters:
     name: imagestreamName
     required: true
     value:
+  - description: The tag of the resulting Imagestream
+    displayName: Imagestream Tag
+    name: imageTag
+    value:
 objects:
   - apiVersion: v1
     kind: ImageStream

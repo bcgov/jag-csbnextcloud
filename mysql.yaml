@@ -119,6 +119,21 @@ objects:
       requests:
         storage: ${VOLUME_CAPACITY}
 - apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${DATABASE_SERVICE_NAME}-backups
+    annotations:
+      volume.beta.kubernetes.io/storage-class: netapp-file-standard
+    labels:
+      appcluster: nextcloud-mysql
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: netapp-file-standard
+    resources:
+      requests:
+        storage: ${VOLUME_CAPACITY}
+- apiVersion: v1
   kind: DeploymentConfig
   metadata:
     annotations:
@@ -189,10 +204,15 @@ objects:
           volumeMounts:
           - mountPath: /var/lib/mysql
             name: ${DATABASE_SERVICE_NAME}-data
+          - mountPath: /var/lib/mysql/backups
+            name: ${DATABASE_SERVICE_NAME}-backups
         volumes:
         - name: ${DATABASE_SERVICE_NAME}-data
           persistentVolumeClaim:
             claimName: ${DATABASE_SERVICE_NAME}
+        - name: ${DATABASE_SERVICE_NAME}-backups
+          persistentVolumeClaim:
+            claimName: ${DATABASE_SERVICE_NAME}-backups
     triggers:
     - imageChangeParams:
         automatic: true

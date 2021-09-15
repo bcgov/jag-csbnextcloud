@@ -15,13 +15,19 @@ parameters:
   required: true
 - name: NEXTCLOUD_IMAGE
   description: Image to deploy
-  value: nextcloud
+  value: my-nextcloud
 - name: NEXTCLOUD_IMAGE_TAG
+  description: Tag of the internal Nextcloud Image to deploy
+  value: latest
+- name: NGINX_IMAGE
+  description: Image to deploy
+  value: my-nginx
+- name: NGINX_IMAGE_TAG
   description: Tag of the internal Nextcloud Image to deploy
   value: latest
 - name: PVC_SIZE
   description: PVC size for Apps, Config and Data
-  value: 2Gi
+  value: 10Gi
 - name: tools_namespace
   description: OpenShift Namespace of ImageStreams
   required: true
@@ -142,18 +148,6 @@ parameters:
   required: true
   value: '*/5 * * * *'
 objects:
-- kind: PersistentVolumeClaim
-  apiVersion: v1
-  metadata:
-    name: ${nextcloud_name}-data
-    labels:
-      appcluster: ${nextcloud_name}
-  spec:
-    accessModes:
-    - ReadWriteMany
-    resources:
-      requests:
-        storage: ${PVC_SIZE}
 - kind: PersistentVolumeClaim
   apiVersion: v1
   metadata:
@@ -386,7 +380,7 @@ objects:
                 name: mysql
           - name: MYSQL_DATABASE
             value: ${MYSQL_DATABASE}
-          image: my-nextcloud
+          image: ${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
           namespace: ${tools_namespace}
           imagePullPolicy: Always
           livenessProbe:
@@ -420,7 +414,7 @@ objects:
           volumeMounts:
           - mountPath: /var/www/html
             name: ${nextcloud_name}-files
-        - image: my-nginx
+        - image: ${NGINX_IMAGE}:${NGINX_IMAGE_TAG}
           namespace: ${tools_namespace}
           imagePullPolicy: Always
           livenessProbe:
