@@ -1,49 +1,49 @@
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: mysqldb-backup
   annotations:
-    description: "Template for MysqlDB container backup job"
-    tags: "database,mariadb,backup"
+    description: "Template for MySQL container backup job"
+    tags: "database,MySQL,backup"
   labels:
     appcluster: nextcloud
 parameters:
 - name: BACKUP_SCHEDULE
-  description: "Cron-like schedule expression. Default: Every hour at :39'"
-  value: "39 * * * *"
+  description: "Cron-like schedule expression. Default: Every day at 22:39'"
+  value: '39 15 * * *'
 - name: BACKUP_KEEP
   description: "Number of backups to keep"
-  value: "5"
+  value: "7"
+- name: tools_namespace
+  description: namespace for tools (Source for local MySQL ImagesStream)
+  required: true
 objects:
-- apiVersion: batch/v2alpha1
+- apiVersion: batch/v1beta1
   kind: CronJob
   metadata:
     name: mysqldb-backup
     labels:
       appcluster: nextcloud
   spec:
-    schedule: ${BACKUP_SCHEDULE}
+    schedule: '${BACKUP_SCHEDULE}'
     concurrencyPolicy: Forbid
     jobTemplate:
       spec:
         template:
           spec:
             volumes:
-              - name: mysql-data
+              - name: mysql-backup-data
                 persistentVolumeClaim:
-                  claimName: mariadb
+                  claimName: mysql-backups
             containers:
-              - name: mysqldb-backup
-                image: centos/mariadb-101-centos7
+              - name: mysql-backup
+                image: image-registry.openshift-image-registry.svc:5000/${tools_namespace}/mysql
                 command:
                   - bash
                   - -c
-                  - DATE=$(date +%Y%m%d-%H-%M-%S); ls -rdt1 /var/lib/mysql/data/dump-* |
-                    head -n -$BACKUP_KEEP | xargs rm; mysqldump --single-transaction -u$MYSQL_USER
-                    -p$MYSQL_PASSWORD -hmariadb nextcloud > /var/lib/mysql/data/dump-$DATE.sql;
-                    echo "Backup complete"; echo; echo "To restore, use:"; echo "~# mysql
-                    -u\$MYSQL_USER -p\$MYSQL_PASSWORD -hmariadb nextcloud < $DATE.sql";
-                    sleep 60
+                  - DATE=$(date +%Y%m%d-%H-%M-%S); ls -rdt1 /var/lib/mysql/data/mysql-* |
+                    head -n -$BACKUP_KEEP | xargs rm;
+                    /usr/bin/mysqldump --skip-lock-tables -h http://mysql -P 3306 -u root --password=$MYSQL_ROOT_PASSWORD --all-databases > /var/lib/mysql/backups/mysql-$DATE.sql;
                 env:
                 - name: BACKUP_KEEP
                   value: ${BACKUP_KEEP}
@@ -52,14 +52,17 @@ objects:
                     secretKeyRef:
                       key: database-user
                       name: mysql
-                - name: MYSQL_PASSWORD
+                - name: MYSQL_ROOT_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      key: database-password
+                      key: database-root-password
                       name: mysql
                 - name: MYSQL_DATABASE
-                  value: nextcloud
+                  valueFrom:
+                    secretKeyRef:
+                      key: database-name
+                      name: mysql
                 volumeMounts:
-                  - name: mariadb-data
-                    mountPath: /var/lib/mysql/data
+                  - name: mysql-backup-data
+                    mountPath: /var/lib/mysql/backups
             restartPolicy: Never

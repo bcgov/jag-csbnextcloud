@@ -128,7 +128,7 @@ objects:
       appcluster: nextcloud-mysql
   spec:
     accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
     storageClassName: netapp-file-standard
     resources:
       requests:

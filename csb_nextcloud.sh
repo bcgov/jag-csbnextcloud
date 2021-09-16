@@ -70,18 +70,19 @@ if [ ${firstTimeNamespace} == "1" ]
 then
   oc project ${toolsNs}
   #Grant access to tools namespace images to the deployment namespace
-  oc4 process -f cross-namespace-image-puller.yaml -p LICENSE_PLATE=${license} -p ENV=${env} | oc4 create -f -
+  oc process -f cross-namespace-image-puller.yaml -p LICENSE_PLATE=${license} -p ENV=${env} | oc4 create -f -
 fi
 
-oc4 project ${oc4Ns}
+oc project ${oc4Ns}
 
 # One Time Only Namespace DB Deploy
 if [ ${firstTimeNamespace} == "1" ]
 then
-  oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p DB_VERSION=${databaseImageTag} | oc4 create -f -
+  oc process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p DB_VERSION=${databaseImageTag} | oc4 create -f -
+  oc process -f mysql-backup.yaml -p tools_namespace=${toolsNs} | oc4 create -f -
 fi
 
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
+oc process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
 
 ### MySQL DB Add second user there
 
@@ -89,4 +90,4 @@ oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.de
 appname="ocj-sft"
 nextcloudName="${appname}-nextcloud"
 cronUrl="http://${nextcloudName}:8080/cron.php"
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
+oc process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
