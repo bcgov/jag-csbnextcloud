@@ -10,7 +10,7 @@ metadata:
 parameters:
 - name: BACKUP_SCHEDULE
   description: "Cron-like schedule expression. Default: Every day at 22:39'"
-  value: '39 15 * * *'
+  value: '39 7 * * *'
 - name: BACKUP_KEEP
   description: "Number of backups to keep"
   value: "7"
@@ -41,9 +41,9 @@ objects:
                 command:
                   - bash
                   - -c
-                  - DATE=$(date +%Y%m%d-%H-%M-%S); ls -rdt1 /var/lib/mysql/data/mysql-* |
+                  - DATE=$(date +%Y%m%d-%H-%M-%S); ls -rdt1 /var/lib/backups/mysql-* |
                     head -n -$BACKUP_KEEP | xargs rm;
-                    /usr/bin/mysqldump --skip-lock-tables -h http://mysql -P 3306 -u root --password=$MYSQL_ROOT_PASSWORD --all-databases > /var/lib/mysql/backups/mysql-$DATE.sql;
+                    /usr/bin/mysqldump --skip-lock-tables -h mysql -P 3306 -u root --password=$MYSQL_ROOT_PASSWORD --all-databases > /var/lib/backups/mysql-$DATE.sql;
                 env:
                 - name: BACKUP_KEEP
                   value: ${BACKUP_KEEP}
@@ -64,5 +64,5 @@ objects:
                       name: mysql
                 volumeMounts:
                   - name: mysql-backup-data
-                    mountPath: /var/lib/mysql/backups
+                    mountPath: /var/lib/backups
             restartPolicy: Never

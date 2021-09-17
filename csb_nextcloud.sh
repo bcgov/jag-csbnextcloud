@@ -3,6 +3,7 @@ read -sp 'Openshift 4 Login Token: ' oc4_token
 echo
 read -p 'Openshift 4 License Plate: ' license
 read -p 'Openshift 4 License Env: ' env
+#read -sp 'OCJ DB User Password: ' ocjPass
 
 #configuration
 nextcloudImageTag="22.1.1-fpm"
@@ -85,6 +86,15 @@ fi
 oc process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} NEXTCLOUD_IMAGE_TAG=${nextcloudImageTag} | oc4 create -f -
 
 ### MySQL DB Add second user there
+## Wait for pod to be up
+## RSH to pod
+## Login to mysql
+##CREATE DATABASE `ocj-sft-nextcloud`;
+##USE `ocj-sft-nextcloud`;
+##CREATE USER `ocjuser`@'%' IDENTIFIED BY '${ocjPass}';
+##GRANT USAGE ON *.* TO `ocjuser`@`%`;
+##GRANT ALL PRIVILEGES ON `ocj-sft-nextcloud`.* TO `ocjuser`@`%`;
+
 
 # Config Values for OCJ
 appname="ocj-sft"

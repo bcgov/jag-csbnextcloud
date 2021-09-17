@@ -204,7 +204,7 @@ objects:
           volumeMounts:
           - mountPath: /var/lib/mysql
             name: ${DATABASE_SERVICE_NAME}-data
-          - mountPath: /var/lib/mysql/backups
+          - mountPath: /var/lib/backups
             name: ${DATABASE_SERVICE_NAME}-backups
         volumes:
         - name: ${DATABASE_SERVICE_NAME}-data
