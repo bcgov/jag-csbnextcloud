@@ -471,7 +471,7 @@ objects:
         - nextcloud
         from:
           kind: ImageStreamTag
-          name: my-nextcloud:latest
+          name: ${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
           namespace: ${tools_namespace}
       type: ImageChange
     - imageChangeParams:
@@ -480,7 +480,7 @@ objects:
         - nginx
         from:
           kind: ImageStreamTag
-          name: my-nginx:latest
+          name: ${NGINX_IMAGE}:${NGINX_IMAGE_TAG}
           namespace: ${tools_namespace}
       type: ImageChange
     - type: ConfigChange
