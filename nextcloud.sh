@@ -9,7 +9,7 @@ read -sp 'Docker Credential: ' dockerCred
 # Config Values
 appname="csb-sft"
 nextcloudName="${appname}-nextcloud"
-nextcloudImage="nextcloud:22-fpm"
+nextcloudImage="nextcloud:22.1.1-fpm"
 nextcloudImagestreamName="nextcloud"
 nginxImage="nginx:alpine"
 nginxImagestreamName="nginx"
@@ -17,8 +17,9 @@ databaseImage="mysql:latest"
 databaseImagestreamName="mysql"
 oc4Ns="${license}-${env}"
 toolsNs="${license}-tools"
-firstTimeDeploy="0"
-firstTimeNamespace="0"
+firstTimeDeploy="0" # This will deploy all Tools Dependencies if 1
+firstTimeNamespace="0"  #This will deploy MySQL DB if first time deploying to namespace
+toolsOnly="0" #This will skip deployment to target env (Dev/test/prod) useful when setting up tools only
 dockerPullSecret="${nextcloudImagestreamName}-docker-creds"
 customNextcloudImagestream="my-nextcloud"
 customNginxImagestream="my-nginx"
@@ -78,4 +79,7 @@ then
   oc4 process -f mysql.yaml -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} | oc4 create -f -
 fi
 
-oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} | oc4 create -f -
+if [ ${toolsOnly} == "0" ]
+then
+  oc4 process -f nextcloud.yaml -p NEXTCLOUD_HOST=${appname}-${env}.apps.silver.devops.gov.bc.ca -p tools_namespace=${toolsNs} -p MYSQL_DATABASE=${nextcloudName} -p nextcloud_name=${nextcloudName} -p ip_whitelist=${ipWhitelist} -p CURL_URL=${cronUrl} | oc4 create -f -
+fi

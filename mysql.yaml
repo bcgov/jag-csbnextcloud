@@ -6,9 +6,9 @@ metadata:
     description: "Mysql - A safe home for all your data"
     tags: "fileshare,nextcloud"
     iconClass: fa-cloud-upload
-    template.openshift.io/provider-display-name: "ChrisHoban"
-    template.openshift.io/documentation-url: "https://github.com/ChrisHoban/ssg-openshift-meta-templates/blob/master/openshift/oc4-meta-templates/services/nextcloud/README.md"
-    template.openshift.io/support-url: "https://github.com/ChrisHoban/ssg-openshift-meta-templates/issues"
+    template.openshift.io/provider-display-name: "JAG-MYSQL"
+    template.openshift.io/documentation-url: "https://github.com/bcgov/jag-csbnextcloud.git"
+    template.openshift.io/support-url: "https://github.com/bcgov/jag-csbnextcloud/issues"
 parameters:
 - name: tools_namespace
   description: OpenShift Namespace of ImageStreams
@@ -38,19 +38,19 @@ parameters:
   name: DATABASE_SERVICE_NAME
   required: true
   value: mysql
-- description: Username for MariaDB user that will be used for accessing the database.
-  displayName: MariaDB Connection Username
+- description: Username for mysql user that will be used for accessing the database.
+  displayName: mysql Connection Username
   from: user[A-Z0-9]{3}
   generate: expression
   name: MYSQL_USER
   required: true
-- description: Password for the MariaDB connection user.
-  displayName: MariaDB Connection Password
+- description: Password for the mysql connection user.
+  displayName: mysql Connection Password
   from: '[a-zA-Z0-9]{16}'
   generate: expression
   name: MYSQL_PASSWORD
   required: true
-- description: Password for the MariaDB root user.
+- description: Password for the mysql root user.
   displayName: mysql root Password
   from: '[a-zA-Z0-9]{16}'
   generate: expression
@@ -93,7 +93,7 @@ objects:
   kind: Service
   metadata:
     annotations:
-      template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mariadb")].port}
+      template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mysql")].port}
     name: ${DATABASE_SERVICE_NAME}
     labels:
       appcluster: nextcloud-mysql
@@ -206,6 +206,9 @@ objects:
             name: ${DATABASE_SERVICE_NAME}-data
           - mountPath: /var/lib/backups
             name: ${DATABASE_SERVICE_NAME}-backups
+          - name: config-mount
+            mountPath: /etc/mysql/my.cnf
+            subPath: my.cnf
         volumes:
         - name: ${DATABASE_SERVICE_NAME}-data
           persistentVolumeClaim:
@@ -213,6 +216,10 @@ objects:
         - name: ${DATABASE_SERVICE_NAME}-backups
           persistentVolumeClaim:
             claimName: ${DATABASE_SERVICE_NAME}-backups
+        - name: config-mount
+          configMap:
+            name: my.cnf
+            defaultMode: 420
     triggers:
     - imageChangeParams:
         automatic: true
@@ -224,3 +231,73 @@ objects:
           namespace: ${tools_namespace}
       type: ImageChange
     - type: ConfigChange
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: my.cnf
+  data:
+    my.cnf: |-
+        # Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+        #
+        # This program is free software; you can redistribute it and/or modify
+        # it under the terms of the GNU General Public License as published by
+        # the Free Software Foundation; version 2 of the License.
+        #
+        # This program is distributed in the hope that it will be useful,
+        # but WITHOUT ANY WARRANTY; without even the implied warranty of
+        # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        # GNU General Public License for more details.
+        #
+        # You should have received a copy of the GNU General Public License
+        # along with this program; if not, write to the Free Software
+        # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+
+        #
+        # The MySQL  Server configuration file.
+        #
+        # For explanations see
+        # http://dev.mysql.com/doc/mysql/en/server-system-variables.html
+
+        [server]
+        skip_name_resolve = 1
+        innodb_buffer_pool_size = 3G
+        innodb_buffer_pool_instances = 1
+        innodb_io_capacity = 12
+        innodb_flush_log_at_trx_commit = 1
+        innodb_log_buffer_size = 32M
+        innodb_max_dirty_pages_pct = 90
+        tmp_table_size= 64M
+        max_heap_table_size= 64M
+        log-error=/var/lib/mysql/mysql.err
+
+
+        # Enable the below for troubleshooting query performance
+        #slow_query_log = 1
+        #slow_query_log_file = /var/log/mysql/slow.log
+        #long_query_time = 1
+
+
+        [client]
+        default-character-set = utf8mb4
+
+        [mysqld]
+        pid-file        = /var/run/mysqld/mysqld.pid
+        socket          = /var/run/mysqld/mysqld.sock
+        datadir         = /var/lib/mysql
+        #query_cache_type = 1
+        #query_cache_limit = 2M
+        #query_cache_min_res_unit = 2k
+        #query_cache_size = 64M
+        secure-file-priv= NULL
+        character_set_server = utf8mb4
+        collation_server = utf8mb4_general_ci
+        transaction_isolation = READ-COMMITTED
+        binlog_format = ROW
+        binlog_expire_logs_seconds = 172800 #2 days
+        #innodb_large_prefix=on
+        #innodb_file_format=barracuda
+        #innodb_file_per_table=1
+        max_connections = 200
+
+        # Custom config should go here
+        !includedir /etc/mysql/conf.d/

@@ -17,9 +17,7 @@ databaseImage="mysql:${databaseImageTag}"
 databaseImagestreamName="mysql"
 oc4Ns="${license}-${env}"
 toolsNs="${license}-tools"
-firstTimeDeploy="0"
 firstTimeNamespace="1"
-dockerPullSecret="${nextcloudImagestreamName}-docker-creds"
 customNextcloudImagestream="my-nextcloud"
 customNginxImagestream="my-nginx"
 ipWhitelist="*"
@@ -33,38 +31,6 @@ cronUrl="http://${nextcloudName}:8080/cron.php"
 
 echo
 oc login --token=${oc4_token} --server=https://api.silver.devops.gov.bc.ca:6443
-
-
-
-# One Time Only TOOLS Setup
-if [ ${firstTimeDeploy} == "1" ]
-then
-  oc project ${toolsNs}
-  oc create secret docker-registry ${dockerPullSecret}\
-      --docker-server=docker.io \
-      --docker-username=${dockerUser} \
-      --docker-password=${dockerCred} \
-      --docker-email=unused
-
-  echo 'Secret link to Service Accounts'
-  oc secrets link default ${dockerPullSecret} --for=pull
-  oc secrets link builder ${dockerPullSecret}
-
-  echo 'Nextcloud ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nextcloudImage} -p imagestreamName=${nextcloudImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${nextcloudImageTag} | oc4 create -f -
-  echo 'NGINX ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${nginxImage} -p imagestreamName=${nginxImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${nginxImageTag} | oc4 create -f -
-  echo 'Database ImageStream'
-  oc process -f docker-image.yaml -p namespace=${toolsNs} -p dockerImage=${databaseImage} -p imagestreamName=${databaseImagestreamName} -p dockerPullSecret=${dockerPullSecret} -p imagestreamTag=${databaseImageTag} | oc4 create -f -
-  echo 'Nextcloud Builder'
-  oc process -f nextcloud-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNextcloudImagestream} -p imageTag=${nextcloudImageTag} | oc4 create -f -
-  echo 'Custom Nextcloud ImageStream'
-  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNextcloudImagestream} -p imageTag=${nextcloudImageTag} | oc4 create -f -
-  echo 'Nginx Builder'
-  oc process -f nginx-buildconfig.yaml -p namespace=${toolsNs} -p outputImageName=${customNginxImagestream} -p imageTag=${nginxImageTag}  | oc4 create -f -
-  echo 'Custom Nginx ImageStream'
-  oc process -f imagestream.yaml -p namespace=${toolsNs} -p imagestreamName=${customNginxImagestream} -p imageTag=${nginxImageTag} | oc4 create -f -
-fi
 
 # One Time Only Namespace Permissions
 if [ ${firstTimeNamespace} == "1" ]

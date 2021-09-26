@@ -1,0 +1,150 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: mysql-installer
+  annotations:
+    description: "Mysql - A safe home for all your data"
+    tags: "fileshare,nextcloud"
+    iconClass: fa-cloud-upload
+    template.openshift.io/provider-display-name: "JAG-NEXTCLOUD"
+    template.openshift.io/documentation-url: "https://github.com/bcgov/jag-csbnextcloud.git"
+    template.openshift.io/support-url: "https://github.com/bcgov/jag-csbnextcloud/issues"
+parameters:
+- description: Nextcloud Service Name
+  displayName: Nextcloud Service Name
+  name: nextcloud_name
+  required: true
+  value: nextcloud
+- name: CURL_URL
+  description: "Curl URL to hit  (eg: 'http://servicename/uri' )"
+  required: true
+  value: 'http://servicename/cron.php'
+- name: SCHEDULE
+  description: "Schedule of cron  (eg: '*/15 * * * *' every 15 minutes)"
+  required: true
+  value: '5 12 * * *'
+- name: REVERSE_PROXY_ADDR
+  description: "Reverse proxy with environment prefix based on deployment IE (dev. test. or '')"
+  required: true
+  value: 'dev.jag.gov.bc.ca'
+- name: GROUP_PATH
+  description: "Nextcloud path to share to groups"
+  required: true
+  value: 'S3 Object Storage/Provincial Judiciary'
+- name: SOURCE_NC
+  description: "Nextcloud uri with files to share"
+  required: true
+  value: 'csb-sft'
+- name: DEST_NC
+  description: "Nextcloud uri with groups to be shared with"
+  required: true
+  value: 'ocj-sft'
+objects:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    annotations:
+      template.openshift.io/expose-password: '{.data[''service-password'']}'
+      template.openshift.io/expose-username: '{.data[''service-user'']}'
+    name: ${nextcloud_name}-svc-account
+    labels:
+      appcluster: ${nextcloud_name}
+  stringData:
+    service-password: ${SERVICE_PASSWORD}
+    service-user: ${SERVICE_USER}
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    name: ${nextcloud_name}-group-cron
+    labels:
+      appcluster: ${nextcloud_name}
+  spec:
+    concurrencyPolicy: Replace
+    jobTemplate:
+      spec:
+        activeDeadlineSeconds: 3600
+        template:
+          spec:
+            containers:
+            - args:
+              - php
+              - -f
+              - /var/www/html/cron.php
+            - env:
+              - name: MYSQL_HOST
+                value: mysql
+              - name: MYSQL_USER
+                valueFrom:
+                  secretKeyRef:
+                    key: database-user
+                    name: mysql
+              - name: MYSQL_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    key: database-password
+                    name: mysql
+              - name: SERVICE_USER
+                valueFrom:
+                  secretKeyRef:
+                    key: service-user
+                    name: ${nextcloud_name}-svc-account
+              - name: SERVICE_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    key: service-password
+                    name: ${nextcloud_name}-svc-account
+              - name: MYSQL_DATABASE
+                value: ${MYSQL_DATABASE}
+              image: ${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
+              namespace: ${tools_namespace}
+              imagePullPolicy: Always
+              name: ${nextcloud_name}-cron
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+              volumeMounts:
+              - mountPath: /var/www/html
+                name: ${nextcloud_name}-files
+              - mountPath: /var/www/scripts
+                name: ${nextcloud_name}-scripts
+            dnsPolicy: ClusterFirst
+            restartPolicy: Never
+            securityContext: {}
+            terminationGracePeriodSeconds: 30
+            volumes:
+            - name: ${nextcloud_name}-files
+              persistentVolumeClaim:
+                claimName: ${nextcloud_name}-files
+            - name: ${nextcloud_name}-scripts
+                configMap:
+                  name: groups.sh
+                  defaultMode: 420
+    schedule: ${SCHEDULE}
+    suspend: false
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: groups.sh
+    labels:
+      appcluster: ${nextcloud_name}
+  data:
+    groups.sh: |-
+
+      #PC_Judge
+      curl -u $SERVICE_USER:$SERVICE_PASSWORD -X GET 'https://${REVERSE_PROXY_ADDR}/${DEST_NC}/ocs/v1.php/cloud/groups/PC_Judge' -H "OCS-APIRequest: true" | grep "element>" | sed s/.*'<element>'/''/ | sed s@'</element>.*'@''@ |
+      while read l; do curl -u "$SERVICE_USER:$SERVICE_PASSWORD" -H "OCS-APIRequest: true" -X POST https://${REVERSE_PROXY_ADDR}/${SOURCE_NC}/ocs/v1.php/apps/files_sharing/api/v1/shares -d path="$GROUP_PATH" -d shareType=6 -d permissions=1 -d shareWith="$l@${REVERSE_PROXY_ADDR}/${DEST_NC}"; done
+
+      #OCJ_Admin
+      curl -u $SERVICE_USER:$SERVICE_PASSWORD -X GET 'https://${REVERSE_PROXY_ADDR}/${DEST_NC}/ocs/v1.php/cloud/groups/OCJ_Admin' -H "OCS-APIRequest: true" | grep "element>" | sed s/.*'<element>'/''/ | sed s@'</element>.*'@''@ |
+      while read l; do curl -u "$SERVICE_USER:$SERVICE_PASSWORD" -H "OCS-APIRequest: true" -X POST https://${REVERSE_PROXY_ADDR}/${SOURCE_NC}/ocs/v1.php/apps/files_sharing/api/v1/shares -d path="$GROUP_PATH" -d shareType=6 -d permissions=1 -d shareWith="$l@${REVERSE_PROXY_ADDR}/${DEST_NC}"; done
+
+      #OCJ_IT
+      curl -u $SERVICE_USER:$SERVICE_PASSWORD -X GET 'https://${REVERSE_PROXY_ADDR}/${DEST_NC}/ocs/v1.php/cloud/groups/OCJ_IT' -H "OCS-APIRequest: true" | grep "element>" | sed s/.*'<element>'/''/ | sed s@'</element>.*'@''@ |
+      while read l; do curl -u "$SERVICE_USER:$SERVICE_PASSWORD" -H "OCS-APIRequest: true" -X POST https://${REVERSE_PROXY_ADDR}/${SOURCE_NC}/ocs/v1.php/apps/files_sharing/api/v1/shares -d path="$GROUP_PATH" -d shareType=6 -d permissions=1 -d shareWith="$l@${REVERSE_PROXY_ADDR}/${DEST_NC}"; done
+
+      #PC_JAA
+      curl -u $SERVICE_USER:$SERVICE_PASSWORD -X GET 'https://${REVERSE_PROXY_ADDR}/${DEST_NC}/ocs/v1.php/cloud/groups/PC_JAA' -H "OCS-APIRequest: true" | grep "element>" | sed s/.*'<element>'/''/ | sed s@'</element>.*'@''@ |
+      while read l; do curl -u "$SERVICE_USER:$SERVICE_PASSWORD" -H "OCS-APIRequest: true" -X POST https://${REVERSE_PROXY_ADDR}/${SOURCE_NC}/ocs/v1.php/apps/files_sharing/api/v1/shares -d path="$GROUP_PATH" -d shareType=6 -d permissions=1 -d shareWith="$l@${REVERSE_PROXY_ADDR}/${DEST_NC}"; done
+
+      #PC_JCM
+      curl -u $SERVICE_USER:$SERVICE_PASSWORD -X GET 'https://${REVERSE_PROXY_ADDR}/${DEST_NC}/ocs/v1.php/cloud/groups/PC_JCM' -H "OCS-APIRequest: true" | grep "element>" | sed s/.*'<element>'/''/ | sed s@'</element>.*'@''@ |
+      while read l; do curl -u "$SERVICE_USER:$SERVICE_PASSWORD" -H "OCS-APIRequest: true" -X POST https://${REVERSE_PROXY_ADDR}/${SOURCE_NC}/ocs/v1.php/apps/files_sharing/api/v1/shares -d path="$GROUP_PATH" -d shareType=6 -d permissions=1 -d shareWith="$l@${REVERSE_PROXY_ADDR}/${DEST_NC}"; done
