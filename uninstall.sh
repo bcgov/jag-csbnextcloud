@@ -11,7 +11,7 @@ echo
 
 oc project ${oc4Ns}
 
-oc get pod -o custom-columns=POD:.metadata.appcluster --no-headers --show-labels
+oc get pod -o custom-columns=POD:.metadata.name --no-headers
 
 read -p 'AppCluster to Uninstall (eg. nextcloud)' appCluster
 echo
