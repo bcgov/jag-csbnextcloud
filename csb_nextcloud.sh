@@ -6,7 +6,7 @@ read -p 'Openshift 4 License Env: ' env
 #read -sp 'OCJ DB User Password: ' ocjPass
 
 #configuration
-nextcloudImageTag="22.1.1-fpm"
+nextcloudImageTag="22.1.1"
 nextcloudImage="nextcloud:${nextcloudImageTag}"
 nextcloudImagestreamName="nextcloud"
 nginxImageTag="latest"

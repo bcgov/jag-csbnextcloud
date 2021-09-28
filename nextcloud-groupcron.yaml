@@ -1,7 +1,7 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: mysql-installer
+  name: nextcloud-group-cron
   annotations:
     description: "Mysql - A safe home for all your data"
     tags: "fileshare,nextcloud"
@@ -15,16 +15,25 @@ parameters:
   name: nextcloud_name
   required: true
   value: nextcloud
-- name: CURL_URL
-  description: "Curl URL to hit  (eg: 'http://servicename/uri' )"
+- description: Name of the MySQL database accessed.
+  displayName: MySQL Database Name
+  name: MYSQL_DATABASE
   required: true
-  value: 'http://servicename/cron.php'
+- name: tools_namespace
+  description: OpenShift Namespace of ImageStreams
+  required: true
+- name: NEXTCLOUD_IMAGE
+  description: Image to deploy
+  value: my-nextcloud
+- name: NEXTCLOUD_IMAGE_TAG
+  description: Tag of the internal Nextcloud Image to deploy
+  value: latest
 - name: SCHEDULE
-  description: "Schedule of cron  (eg: '*/15 * * * *' every 15 minutes)"
+  description: "Schedule of cron  "
   required: true
   value: '5 12 * * *'
 - name: REVERSE_PROXY_ADDR
-  description: "Reverse proxy with environment prefix based on deployment IE (dev. test. or '')"
+  description: "Reverse proxy with environment prefix based on deployment"
   required: true
   value: 'dev.jag.gov.bc.ca'
 - name: GROUP_PATH
@@ -95,10 +104,9 @@ objects:
                     name: ${nextcloud_name}-svc-account
               - name: MYSQL_DATABASE
                 value: ${MYSQL_DATABASE}
-              image: ${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
-              namespace: ${tools_namespace}
+              name: ${nextcloud_name}-job-pod
+              image: ${tools_namespace}/${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
               imagePullPolicy: Always
-              name: ${nextcloud_name}-cron
               resources: {}
               terminationMessagePath: /dev/termination-log
               volumeMounts:
@@ -115,9 +123,9 @@ objects:
               persistentVolumeClaim:
                 claimName: ${nextcloud_name}-files
             - name: ${nextcloud_name}-scripts
-                configMap:
-                  name: groups.sh
-                  defaultMode: 420
+              configMap:
+                name: groups.sh
+                defaultMode: 420
     schedule: ${SCHEDULE}
     suspend: false
 - apiVersion: v1

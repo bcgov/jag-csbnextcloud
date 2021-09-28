@@ -282,8 +282,7 @@ objects:
             # Pass PHP variables directly to PHP.
             # This is usually done in the php.ini. For more flexibility, these variables are configured in the nginx config.
             # All the PHP parameters have to be set in one fastcgi_param. When using more 'fastcgi_param PHP_VALUE' directives, the last one will override all the others.
-            fastcgi_param PHP_VALUE "open_basedir=/var/www:/tmp/:/var/nextcloud_data:/dev/urandom:/proc/meminfo
-                              upload_max_filesize = 10G
+            fastcgi_param PHP_VALUE "upload_max_filesize = 10G
                               post_max_size = 10G
                               max_execution_time = 3600
                               output_buffering = off";
