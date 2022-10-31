@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>move</id>
+    <name>Move</name>
+    <summary>Move files within Nextcloud installation</summary>
+    <description><![CDATA[Move files within Nextcloud installation]]></description>
+    <version>0.0.3</version>
+    <licence>agpl</licence>
+    <author mail="greg.1.lavery@gov.bc.ca" >Gregory Lavery</author>
+    <namespace>Move</namespace>
+    <category>tools</category>
+    <bugs>https://gov.bc.ca</bugs>
+    <dependencies>
+        <nextcloud min-version="22" max-version="25"/>
+    </dependencies>
+    <!-- <navigations>
+        <navigation>
+            <name>Move</name>
+            <route>move.page.index</route>
+        </navigation>
+    </navigations> -->
+</info>
