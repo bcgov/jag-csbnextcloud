@@ -1,0 +1,14 @@
+{
+    "name": "gregl/move",
+    "description": "Move files within Nextcloud installation",
+    "type": "project",
+    "license": "AGPL",
+    "authors": [
+        {
+            "name": "Gregory Lavery"
+        }
+    ],
+    "require": {
+
+    }
+}
