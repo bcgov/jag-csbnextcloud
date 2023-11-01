@@ -10,4 +10,4 @@ ADD www.conf /usr/local/etc/php-fpm.d/www.conf
 # Security Enhancements
 
 # Bug Fixes
-RUN touch /usr/local/etc/php/conf.d/redis-session.ini && chown 0:1009650000 /usr/local/etc/php/conf.d/redis-session.ini && chmod 770 /usr/local/etc/php/conf.d/redis-session.ini # https://github.com/nextcloud/docker/issues/763#issuecomment-1751694237
+RUN touch /usr/local/etc/php/conf.d/redis-session.ini && chmod 666 /usr/local/etc/php/conf.d/redis-session.ini # https://github.com/nextcloud/docker/issues/763#issuecomment-1751694237
