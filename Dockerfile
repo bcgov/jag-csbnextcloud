@@ -5,6 +5,8 @@ RUN chmod -R 0770 /var/www/html
 ENV NEXTCLOUD_UPDATE=1
 ADD www.conf /usr/local/etc/php-fpm.d/www.conf
 
+ADD move-app /apps/move-app
+
 # Nextcloud Plugins
 
 # Security Enhancements
