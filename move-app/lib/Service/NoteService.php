@@ -279,7 +279,7 @@ class NoteService {
 	}
 	  
 	public function determineDataFolder() {
-		return "/var/www/html/data/__groupfolders/1";
+		return "/var/www/html/data2";
 		// Valid for DEV only.
 
 		$folders_root = "/var/www/html/data/__groupfolders/";
