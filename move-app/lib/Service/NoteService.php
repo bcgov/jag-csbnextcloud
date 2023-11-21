@@ -279,8 +279,8 @@ class NoteService {
 	}
 	  
 	public function determineDataFolder() {
-		return "/var/www/html/data2";
-		// Valid for DEV only.
+		return "/bail-hearing-packages"; // <- PVC mounts here
+		// Valid for DEV only. (Formerly?)
 
 		$folders_root = "/var/www/html/data/__groupfolders/";
 		$loop = 0;
