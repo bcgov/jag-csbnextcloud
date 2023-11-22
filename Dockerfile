@@ -6,6 +6,9 @@ ENV NEXTCLOUD_UPDATE=1
 ADD www.conf /usr/local/etc/php-fpm.d/www.conf
 
 ADD move-app /apps/move
+# Symlink Nextcloud app folder under PVC to container app
+#
+#     $ ln -s /apps/move /var/www/html/custom_apps/
 
 # Nextcloud Plugins
 
