@@ -1,5 +1,5 @@
 kind: Template
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 metadata:
   name: mysql-installer
   annotations:
@@ -128,7 +128,7 @@ objects:
       appcluster: nextcloud-mysql
   spec:
     accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
     storageClassName: netapp-file-standard
     resources:
       requests:

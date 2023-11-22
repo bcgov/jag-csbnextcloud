@@ -1,5 +1,5 @@
 kind: Template
-apiVersion: v1
+apiVersion: template.openshift.io/v1
 metadata:
   name: nextcloud-installer
   annotations:
@@ -182,8 +182,8 @@ objects:
         }
 
         server {
-          listen *:8080 default_server;
-          listen [::]:8080 default_server;
+          listen *:8080 http2 default_server;
+          listen [::]:8080 http2 default_server;
           server_name _;
           access_log /dev/stdout;
 
@@ -341,13 +341,13 @@ objects:
     strategy:
       activeDeadlineSeconds: 21600
       resources: {}
-      rollingParams:
-        intervalSeconds: 1
-        maxSurge: 25%
-        maxUnavailable: 25%
-        timeoutSeconds: 600
-        updatePeriodSeconds: 1
-      type: Rolling
+        #     rollingParams:
+        #       intervalSeconds: 1
+        #       maxSurge: 25%
+        #       maxUnavailable: 25%
+        #       timeoutSeconds: 600
+        #       updatePeriodSeconds: 1
+      type: Recreate
     template:
       metadata:
         labels:
@@ -371,7 +371,7 @@ objects:
           - name: MYSQL_DATABASE
             value: ${MYSQL_DATABASE}
           image: ${NEXTCLOUD_IMAGE}:${NEXTCLOUD_IMAGE_TAG}
-          namespace: ${tools_namespace}
+          #namespace: ${tools_namespace}
           imagePullPolicy: Always
           livenessProbe:
             failureThreshold: 30
@@ -382,6 +382,13 @@ objects:
               port: 9000
             timeoutSeconds: 5
           name: nextcloud
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/bash
+                  - '-c'
+                  - '$(while true; do php -f /var/www/html/cron.php ; sleep 5m ; done) & disown'
           ports:
           - containerPort: 9000
             protocol: TCP
@@ -405,7 +412,7 @@ objects:
           - mountPath: /var/www/html
             name: ${nextcloud_name}-files
         - image: ${NGINX_IMAGE}:${NGINX_IMAGE_TAG}
-          namespace: ${tools_namespace}
+          #namespace: ${tools_namespace}
           imagePullPolicy: Always
           livenessProbe:
             failureThreshold: 30
@@ -453,6 +460,9 @@ objects:
           configMap:
             name: ${nextcloud_name}-nginx-config
             defaultMode: 420
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
     test: false
     triggers:
     - imageChangeParams:
@@ -501,7 +511,7 @@ objects:
     labels:
       appcluster: ${nextcloud_name}
   spec:
-    host: ${NEXTCLOUD_HOST}
+    #host: ${NEXTCLOUD_HOST}
     port:
       targetPort: 8080-tcp
     to:
