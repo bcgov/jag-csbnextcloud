@@ -1,3 +1,5 @@
+# NOTE:  AS OF NOVEMBER 23, 2023, THE CSB NextCloud PROJECT HAS BEEN SHELVED. 
+
 # Nextcloud OpenShift Deployment
 
 The goal of this set of templates and scripts is to rapidly deploy a Nextcloud Cluster that adheres to BC Gov standard Namespace conventions. It deploys builders and imagestreams to Tools as first time run, and deploys Nextcloud and MariaDB including Deployment Configs/services/Routes/Secrets/ConfigMaps/PVCs/CronJobs to the appropriate environment (dev/test/prod). Some additions to a standard docker image based nextcloud install:
